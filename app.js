@@ -6,11 +6,18 @@ const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const clearBtn = document.getElementById('clearBtn');
 const soundClips = document.getElementById('sound-clips');
+const voiceBtn = document.getElementById('VoiceBtn');
+const llmResult = document.getElementById('llm_result');
+const titleHead = document.getElementById('title')
 
 let textArea = document.getElementById('results');
 
 let lastResult = '';
 let resultList = [];
+
+titleHead.onclick = (()=>{
+  window.localStorage.setItem('API_KEY',prompt('请输入API-Key'));
+})
 
 clearBtn.onclick = function() {
   resultList = [];
@@ -88,6 +95,8 @@ let recordingLength = 0; // number of samples so far
 
 let recognizer = null;
 let recognizer_stream = null;
+
+let GlobalResult = "";
 
 if (navigator.mediaDevices.getUserMedia) {
   console.log('getUserMedia supported.');
@@ -189,6 +198,7 @@ if (navigator.mediaDevices.getUserMedia) {
       document.getElementById('VoiceBtn').classList.add('recording');
     };
 
+    voiceBtn.addEventListener('touchstart',onListenBG);
     startBtn.onclick = onListenBG;
     var isListening = false;
     window.addEventListener("keydown",(ev)=>{
@@ -200,6 +210,15 @@ if (navigator.mediaDevices.getUserMedia) {
 
     var onListenED = function() {
       console.log('recorder stopped');
+      let result = recognizer.getResult(recognizer_stream).text;
+      if (recognizer.config.modelConfig.paraformer.encoder != '') {
+        let tailPaddings = new Float32Array(expectedSampleRate);
+        recognizer_stream.acceptWaveform(expectedSampleRate, tailPaddings);
+        while (recognizer.isReady(recognizer_stream)) {
+          recognizer.decode(recognizer_stream);
+        }
+        result = recognizer.getResult(recognizer_stream).text;
+      }
 
       // stopBtn recording
       recorder.disconnect(audioCtx.destination);
@@ -212,6 +231,23 @@ if (navigator.mediaDevices.getUserMedia) {
       stopBtn.disabled = true;
       startBtn.disabled = false;
       document.getElementById('VoiceBtn').classList.remove('recording');
+
+      (()=>{
+
+        if (result.length > 0 && lastResult != result) {
+          lastResult = result;
+        }
+        if (lastResult.length > 0) {
+          resultList.push(lastResult);
+          lastResult = '';
+        }
+        console.log(resultList)
+        // AI_ASK
+        ai_ask(resultList.join()).then((data)=>{
+          console.log(data)
+          llmResult.innerText += JSON.stringify(data) +'\r\n';
+        })
+      })()
 
       var clipName = new Date().toISOString();
 
@@ -256,6 +292,8 @@ if (navigator.mediaDevices.getUserMedia) {
         }
       };
     };
+
+    voiceBtn.addEventListener("touchend",onListenED);
     stopBtn.onclick = onListenED;
     window.addEventListener("keyup",(ev)=>{
       if(ev.key == " " && isListening){

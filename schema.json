@@ -1,0 +1,32 @@
+{
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "title": "AI JSON Schema",
+    "properties": {
+        "thinking":{
+            "type":"string",
+            "description": "关于用户这个命令的一部分思考信息，可以辅助后文决策"
+        },
+        "actions":{
+            "type":"array",
+            "description": "调度系统决定让各个组件执行的动作合集",
+            "items": {
+                "type":"object",
+                "description": "具体的一个动作",
+                "properties": {
+                    "node":{
+                        "type":"string",
+                        "description": "执行节点，例如arm表示机械臂"
+                    },
+                    "task":{
+                        "type":"string",
+                        "description": "以最简单轻量化的方式向VLA子模型提供的语言文本描述"
+                    },
+                    "possibility":{
+                        "type":"number",
+                        "description": "你认为这个任务能否执行，如果小于0.7，则在下文再创建一个更靠谱的任务"
+                    }
+                }
+            }
+        }
+    }
+}
